@@ -7,6 +7,7 @@ from .. import config
 from config import *
 import re
 from copy import deepcopy
+from collections import OrderedDict
 
 #############################################################################
 # SES cmd output formatter
@@ -67,28 +68,47 @@ def convert2dict(cmd_out):
    return dict_list
 
 def convert2array(cmd_out):
-    out_list_o = cmd_out.split('\n')
-    out_list = []
-    for line in out_list_o:
-        if line.count('-')< count_hyphen and len(line)>count_hyphen:
-            out_list.append(line)
+    out_list = cmd_out.split('\n')
 
-    colum_index=[]
-    for colum_name in filter(lambda a: a != '', out_list[0].split(' ')):
-        colum_index.append(out_list[0].index(colum_name))
+    #To find the Headers of the table
+    i=0
+    for line in out_list:
+        if '-'*count_hyphen in line:
+            table_mark = i
+            break
+        i+=1
+    colum_index = []
+    for colum_name in filter(lambda a: a.strip() != '', out_list[table_mark-1].split('  ')):
+        colum_name = colum_name.strip()
+        if colum_name !='':
+            colum_index.append(out_list[table_mark-1].index(colum_name))
+
+    colum_header = out_list[table_mark-1]
 
     response_list=[]
-    for line_string in out_list:
-        line_x=[]
-        i=0
-        while True:
-            try:
-                line_x.append((line_string[colum_index[i]:colum_index[i+1]]).strip())
-            except IndexError:
-                line_x.append((line_string[colum_index[i]:]).strip())
-                break
-            i+=1
-        response_list.append(line_x)
+    while True:
+        try:
+            line_string = out_list[table_mark+1]
+        except:
+            break
+        table_mark+=1
+        if line_string.strip() !="" and "-"*count_hyphen not in line_string:
+            #line_x= OrderedDict()
+            line_x={}
+            i=0
+            while True:
+                try:
+                    key = colum_header[colum_index[i]:colum_index[i+1]].strip()
+                    value = line_string[colum_index[i]:colum_index[i+1]].strip()
+                    line_x[key] = value
+                except IndexError:
+                    key = colum_header[colum_index[i]:].strip()
+                    value = line_string[colum_index[i]:].strip()
+                    line_x[key] = value
+                    break
+
+                i+=1
+            response_list.append(line_x)
     return response_list
 
 
